@@ -1,60 +1,60 @@
 # Semantic Chunking Engine
 
-Este subproyecto forma parte de la infraestructura modular de Inteligencia Artificial ai-core-infra. Implementa un motor de fragmentacion inteligente (Semantic Chunking) disenado para segmentar documentos extensos en base a la transicion del significado semantico entre oraciones, optimizando la preparacion de datos para pipelines de Generacion Aumentada por Recuperacion (RAG).
+This subproject is part of the ai-core-infra modular AI infrastructure. It implements a smart chunking engine (Semantic Chunking) designed to segment long documents based on the transition of semantic meaning between sentences, optimizing data preparation for Retrieval-Augmented Generation (RAG) pipelines.
 
-Para este sistema se implemento un algoritmo basado en similitud vectorial que se integra directamente con el tokenizador local [bpe-tokenizer-from-scratch](https://github.com/juanmmm21/bpe-tokenizer-from-scratch) para validar los limites de capacidad fisica de contexto.
+For this system an algorithm based on vector similarity was implemented, integrating directly with the local tokenizer [bpe-tokenizer-from-scratch](https://github.com/juanmmm21/bpe-tokenizer-from-scratch) to validate physical context capacity limits.
 
-## Fundamento Matematico del Chunking Semantico
+## Mathematical Foundation of Semantic Chunking
 
-A diferencia de los fragmentadores tradicionales de tamano fijo que cortan el texto de forma arbitraria (pudiendo dividir oraciones o conceptos a la mitad), el fragmentador semantico sigue una metodologia estructurada y cientifica:
+Unlike traditional fixed-size chunkers that cut text arbitrarily (potentially splitting sentences or concepts in half), the semantic chunker follows a structured, scientific methodology:
 
-### 1. Segmentacion de Oraciones
-El texto plano se divide en oraciones utilizando un analizador basado en expresiones regulares disenado para ignorar puntos que forman parte de abreviaturas comunes en espanol e ingles (por ejemplo: `Dr.`, `Sr.`, `p.ej.`, `U.S.A.`).
+### 1. Sentence Segmentation
+Plain text is split into sentences using a regex-based analyzer designed to ignore periods that are part of common Spanish and English abbreviations (e.g. `Dr.`, `Mr.`, `e.g.`, `U.S.A.`).
 
-### 2. Contextualizacion por Ventana Deslizante (Sliding Window)
-Para dotar a cada oracion de un contexto local robusto y evitar el ruido de oraciones excesivamente cortas, cada oracion se combina con sus vecinas adyacentes segun un tamano de ventana parametrizable:
+### 2. Contextualization via Sliding Window
+To give each sentence a robust local context and avoid noise from excessively short sentences, each sentence is combined with its adjacent neighbors according to a configurable window size:
 
 $$C_i = \text{concat}(S_{i-w}, \dots, S_i, \dots, S_{i+w})$$
 
-Donde $w$ es el tamano de la ventana deslizante (`window_size`).
+Where $w$ is the sliding window size (`window_size`).
 
-### 3. Calculo de Embeddings y Distancia Semantica
-Se obtienen los vectores de embeddings de las oraciones contextualizadas. La transicion semantica se evalua calculando la distancia de coseno (1 - similitud) entre vectores de oraciones consecutivas $C_i$ y $C_{i+1}$:
+### 3. Embedding Computation and Semantic Distance
+Embedding vectors are obtained for the contextualized sentences. The semantic transition is evaluated by computing the cosine distance (1 - similarity) between vectors of consecutive sentences $C_i$ and $C_{i+1}$:
 
 $$\text{sim}(C_i, C_{i+1}) = \frac{C_i \cdot C_{i+1}}{\|C_i\|_2 \|C_{i+1}\|_2}$$
 
 $$d_i = 1 - \text{sim}(C_i, C_{i+1})$$
 
-### 4. Determinacion de Puntos de Corte Dinamicos (Boundaries)
-Se establece un umbral de corte adaptativo utilizando la media y desviacion estandar de la serie de distancias:
+### 4. Determining Dynamic Cut Points (Boundaries)
+An adaptive cutoff threshold is set using the mean and standard deviation of the distance series:
 
 $$\tau = \mu_d + k \cdot \sigma_d$$
 
-Donde:
-*   $\mu_d$ es el promedio aritmetico de las distancias consecutivas del texto.
-*   $\sigma_d$ es la desviacion estandar de las distancias.
-*   $k$ es el factor de sensibilidad (`threshold_factor`, tipicamente en el rango de $1.0$ a $1.5$).
+Where:
+*   $\mu_d$ is the arithmetic mean of the text's consecutive distances.
+*   $\sigma_d$ is the standard deviation of the distances.
+*   $k$ is the sensitivity factor (`threshold_factor`, typically in the range $1.0$ to $1.5$).
 
-Cualquier indice $i$ donde $d_i > \tau$ representa un salto tematico significativo y se define como un limite de division de chunk.
+Any index $i$ where $d_i > \tau$ represents a significant topic shift and is defined as a chunk split boundary.
 
-### 5. Restriccion de Capacidad Fisica de Tokens
-Para asegurar que ningun fragmento exceda la capacidad maxima de contexto del LLM (`max_tokens`), cada bloque semantico se pre-tokeniza utilizando el `BPETokenizer` de la infraestructura. Si un fragmento excede el limite fisico, se realiza una subdivision binaria basada en oraciones hasta cumplir con la restriccion.
+### 5. Physical Token Capacity Constraint
+To ensure no fragment exceeds the LLM's maximum context capacity (`max_tokens`), each semantic block is pre-tokenized using the infrastructure's `BPETokenizer`. If a fragment exceeds the physical limit, a binary sentence-based subdivision is performed until the constraint is satisfied.
 
-## Proveedor de Embeddings Fuera de Linea (Mock)
+## Offline Embedding Provider (Mock)
 
-Para entornos donde no se disponga de conexion a internet o de recursos GPU, se implementa una clase `MockEmbeddingProvider`. Esta genera representaciones vectoriales deterministicas de dimension $D$ (por defecto 384) a partir de las frecuencias de caracteres y hashes de terminos del texto:
+For environments without internet access or GPU resources, a `MockEmbeddingProvider` class is implemented. It generates deterministic vector representations of dimension $D$ (384 by default) from character frequencies and term hashes of the text:
 
 $$\text{vec}[i] = \sum_{w \in S} \text{hash}(w, i)$$
 
-Posteriormente, se normaliza bajo la norma $L_2$:
+It is then normalized under the $L_2$ norm:
 
 $$\text{vec}_{L2} = \frac{\text{vec}}{\|\text{vec}\|_2}$$
 
-Esto preserva la validez de los calculos de similitud de coseno, permitiendo pruebas sin descargas ni dependencias pesadas.
+This preserves the validity of cosine similarity calculations, allowing testing without downloads or heavy dependencies.
 
-## Especificaciones de Configuracion y Datos
+## Configuration and Data Specifications
 
-### Parametros de Inicializacion
+### Initialization Parameters
 ```python
 class SemanticChunker:
     def __init__(
@@ -67,32 +67,32 @@ class SemanticChunker:
     )
 ```
 
-## Requisitos de Instalacion
+## Installation Requirements
 
-*   Python 3.10 o superior
+*   Python 3.10 or higher
 *   Numpy
-*   Sentence-Transformers (opcional, para embeddings semanticos reales)
+*   Sentence-Transformers (optional, for real semantic embeddings)
 
-Para instalar los requisitos, ejecute:
+To install the requirements, run:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Guia de Ejecucion y Verificacion
+## Execution and Verification Guide
 
-### 1. Ejecutar Pruebas Unitarias
+### 1. Run Unit Tests
 ```bash
 python3 -m unittest test_chunker.py
 ```
 
-### 2. Ejecutar Script Demostrativo
+### 2. Run the Demo Script
 ```bash
 python3 example.py
 ```
 
-## Conectividad en el Ecosistema ai-core-infra
+## Connectivity within the ai-core-infra Ecosystem
 
-El modulo `semantic-chunking-engine` actua como un puente crucial en el pipeline de datos:
-*   Consume a [bpe-tokenizer-from-scratch](https://github.com/juanmmm21/bpe-tokenizer-from-scratch) para el control del limite max_tokens.
-*   En produccion, los embeddings reales pueden ser entrenados localmente con [contrastive-embedding-trainer](https://github.com/juanmmm21/contrastive-embedding-trainer).
-*   Los fragmentos semanticos generados son almacenados e indexados de forma optima en [nano-vector-db](https://github.com/juanmmm21/nano-vector-db) y consumidos por la SPA final [nexus-second-brain](https://github.com/juanmmm21/nexus-second-brain).
+The `semantic-chunking-engine` module acts as a crucial bridge in the data pipeline:
+*   Consumes [bpe-tokenizer-from-scratch](https://github.com/juanmmm21/bpe-tokenizer-from-scratch) to control the max_tokens limit.
+*   In production, real embeddings can be trained locally with [contrastive-embedding-trainer](https://github.com/juanmmm21/contrastive-embedding-trainer).
+*   The generated semantic fragments are optimally stored and indexed in [nano-vector-db](https://github.com/juanmmm21/nano-vector-db) and consumed by the final SPA [nexus-second-brain](https://github.com/juanmmm21/nexus-second-brain).
