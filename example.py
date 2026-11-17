@@ -1,12 +1,10 @@
-import os
-from typing import List
+
+from embedding_provider import LocalEmbeddingProvider, MockEmbeddingProvider
+from chunker import SemanticChunker
 
 # El BPETokenizer de bpe-tokenizer-from-scratch se conecta a este chunker en el SDK `aicore` del
 # hub (los componentes no se importan entre si). Aqui el chunker cuenta tokens por palabras.
 BPETokenizer = None
-
-from embedding_provider import LocalEmbeddingProvider, MockEmbeddingProvider
-from chunker import SemanticChunker
 
 def get_bpe_tokenizer() -> BPETokenizer:
     """
@@ -90,7 +88,7 @@ def run_demo() -> None:
         print(f"\n[CHUNK {chunk['index']}]")
         print(f"  Tokens estimados (BPE Propio): {chunk['num_tokens']}")
         print(f"  Número de oraciones: {len(chunk['sentences'])}")
-        print(f"  Contenido:")
+        print("  Contenido:")
         print(f"    \"{chunk['text']}\"")
         print("  " + "."*50)
 
