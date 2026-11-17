@@ -1,16 +1,9 @@
 import os
-import sys
 from typing import List
 
-# Interlinking: Importamos de forma dinámica el BPETokenizer propio de la infraestructura
-# agregando su ruta local al sys.path para cumplir las directrices de reutilización de código.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bpe-tokenizer-from-scratch")))
-
-try:
-    from tokenizer import BPETokenizer
-except ImportError:
-    # Fallback por si la carpeta no está en la misma estructura relativa
-    BPETokenizer = None
+# El BPETokenizer de bpe-tokenizer-from-scratch se conecta a este chunker en el SDK `aicore` del
+# hub (los componentes no se importan entre si). Aqui el chunker cuenta tokens por palabras.
+BPETokenizer = None
 
 from embedding_provider import LocalEmbeddingProvider, MockEmbeddingProvider
 from chunker import SemanticChunker
@@ -21,7 +14,7 @@ def get_bpe_tokenizer() -> BPETokenizer:
     para que funcione como contador de tokens nativo.
     """
     if BPETokenizer is None:
-        print("Advertencia: No se encontró el módulo BPETokenizer propio. Se utilizará un contador básico de palabras.")
+        print("Sin tokenizador BPE (se conecta desde aicore): se cuentan palabras.")
         return None
         
     print("Inicializando y entrenando el BPETokenizer propio de la infraestructura...")
