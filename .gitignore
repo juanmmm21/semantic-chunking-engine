@@ -17,3 +17,8 @@ env/
 # Hugging Face local models/cache if saved in-tree
 .cache/
 hf_models/
+
+# Packaging
+build/
+dist/
+*.egg-info/

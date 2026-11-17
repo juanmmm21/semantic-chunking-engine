@@ -1,7 +1,7 @@
 import unittest
 from typing import List
-from embedding_provider import MockEmbeddingProvider
-from chunker import SemanticChunker
+from semantic_chunking_engine.embedding_provider import MockEmbeddingProvider
+from semantic_chunking_engine.chunker import SemanticChunker
 
 class DummyTokenizer:
     """
